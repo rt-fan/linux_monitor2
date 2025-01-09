@@ -3,7 +3,7 @@ from tkinter import messagebox
 import psutil
 import sqlite3
 import time
-import threading
+
 
 class SystemMonitorApp:
     def __init__(self, master):
