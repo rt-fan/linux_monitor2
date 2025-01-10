@@ -8,51 +8,34 @@ import time
 class SystemMonitorApp:
     def __init__(self, master):
         self.master = master
-        self.master.title("Тестовое задание")
-        self.master.geometry("300x320+100+100")
-
-        self.label = tk.Label(master, text="Уровень загруженности:")
-        self.label.place(x=20, y=20)
+        self.master.title("Системный монитор")
         
         self.cpu_label = tk.Label(master, text="Загрузка ЦП: 0%")
-        self.cpu_label.place(x=20, y=60)
+        self.cpu_label.pack()
         
         self.ram_label = tk.Label(master, text="Использование ОЗУ: 0%")
-        self.ram_label.place(x=20, y=90)
+        self.ram_label.pack()
         
         self.disk_label = tk.Label(master, text="Использование ПЗУ: 0%")
-        self.disk_label.place(x=20, y=120)
-
-        self.set_time = tk.Entry(master, width=3)
-        self.set_time.insert(0, "1")
-        self.set_time_label_1 = tk.Label(master, text="Обновлять каждые")
-        self.set_time_label_2 = tk.Label(master, text="сек.")
-        self.set_time_label_1.place(x=50, y=200)
-        self.set_time.place(x=180, y=200)
-        self.set_time_label_2.place(x=210, y=200)
+        self.disk_label.pack()
         
-        self.start_button = tk.Button(master, text="Начать запись", width=20,
-                                      command=self.start_recording)
-        self.start_button.place(x=50, y=230)
+        self.start_button = tk.Button(master, text="Начать запись", command=self.start_recording)
+        self.start_button.pack()
         
-        self.stop_button = tk.Button(master, text="Остановить запись", width=20, 
-                                     command=self.stop_recording)
-        self.stop_button.place(x=50, y=230)
-        self.stop_button.place_forget()
-
-        self.elapsed_time = tk.Label(master, text="00:00")
-        self.elapsed_time.place(x=130, y=270)
+        self.stop_button = tk.Button(master, text="Остановить", command=self.stop_recording)
+        self.stop_button.pack()
+        self.stop_button.pack_forget()  # Скрыть кнопку остановки
         
         self.recording = False
         self.start_time = None
         
+        self.update_interval = 1  # Интервал обновления в секундах
         self.db_connection = sqlite3.connect('system_monitor.db')
         self.create_table()
         
         self.update_system_info()
 
     def create_table(self):
-        '''Создание БД'''
         cursor = self.db_connection.cursor()
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS system_usage (
@@ -65,12 +48,9 @@ class SystemMonitorApp:
         self.db_connection.commit()
 
     def update_system_info(self):
-        '''Обновление окна'''
         cpu_usage = psutil.cpu_percent()
         ram_usage = psutil.virtual_memory().percent
         disk_usage = psutil.disk_usage('/').percent
-
-        self.update_interval = int(self.set_time.get())
         
         self.cpu_label.config(text=f"Загрузка ЦП: {cpu_usage}%")
         self.ram_label.config(text=f"Использование ОЗУ: {ram_usage}%")
@@ -82,49 +62,33 @@ class SystemMonitorApp:
         self.master.after(self.update_interval * 1000, self.update_system_info)
 
     def record_usage(self, cpu, ram, disk):
-        '''Запись данных в БД'''
         cursor = self.db_connection.cursor()
-        cursor.execute('''
-            INSERT INTO system_usage (timestamp, cpu_usage, ram_usage, disk_usage)
-            VALUES (DATETIME('now', '+3 hours'), ?, ?, ?)
-        ''', (cpu, ram, disk))
+        cursor.execute('INSERT INTO system_usage (cpu_usage, ram_usage, disk_usage) VALUES (?, ?, ?)', 
+                       (cpu, ram, disk))
         self.db_connection.commit()
 
     def start_recording(self):
-        '''Начинаем запись'''
         self.recording = True
         self.start_time = time.time()
-        self.start_button.place_forget()
-        self.stop_button.place(x=50, y=230)
+        self.start_button.pack_forget()
+        self.stop_button.pack()
         self.update_timer()
 
     def stop_recording(self):
-        '''Останавливаем запись'''
         self.recording = False
-        self.stop_button.place_forget()
-        self.start_button.place(x=50, y=230)
+        self.stop_button.pack_forget()
+        self.start_button.pack()
         self.start_time = None
-        self.elapsed_time.config(text=f"00:00")
-    
-    @staticmethod
-    def seconds_to_mm_ss(seconds):
-        '''Форматируем секунды в вид mm:ss'''
-        minutes = seconds // 60
-        seconds = seconds % 60
-        return f"{minutes:02}:{seconds:02}"
 
     def update_timer(self):
-        ''''''
         if self.recording:
             elapsed_time = int(time.time() - self.start_time)
-            formatted_time = self.seconds_to_mm_ss(elapsed_time)
-            self.elapsed_time.config(text=f"{formatted_time}")
+            self.stop_button.config(text=f"Остановить (время записи: {elapsed_time} сек)")
             self.master.after(1000, self.update_timer)
 
     def on_closing(self):
         self.db_connection.close()
         self.master.destroy()
-
 
 if __name__ == "__main__":
     root = tk.Tk()
