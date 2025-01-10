@@ -16,10 +16,10 @@ class SystemMonitorApp:
         self.cpu_label = tk.Label(master, text="Загрузка ЦП: 0%")
         self.cpu_label.place(x=20, y=60)
         
-        self.ram_label = tk.Label(master, text="Использование ОЗУ: 0%")
+        self.ram_label = tk.Label(master, text="Использование ОЗУ: 0")
         self.ram_label.place(x=20, y=90)
         
-        self.disk_label = tk.Label(master, text="Использование ПЗУ: 0%")
+        self.disk_label = tk.Label(master, text="Использование ПЗУ: %")
         self.disk_label.place(x=20, y=120)
 
         self.set_time = tk.Entry(master, width=3)
@@ -47,6 +47,9 @@ class SystemMonitorApp:
         
         self.db_connection = sqlite3.connect('system_monitor.db')
         self.create_table()
+
+        self.total_memory = psutil.virtual_memory().total / (1024 ** 3)
+        self.total_disk = psutil.disk_usage('/').total / (1024 ** 3)
         
         self.update_system_info()
 
@@ -66,14 +69,14 @@ class SystemMonitorApp:
     def update_system_info(self):
         '''Обновление окна'''
         cpu_usage = psutil.cpu_percent()
-        ram_usage = psutil.virtual_memory().percent
-        disk_usage = psutil.disk_usage('/').percent
+        ram_usage = psutil.virtual_memory().free / (1024 ** 3)
+        disk_usage = psutil.disk_usage('/').free / (1024 ** 3)
 
         self.update_interval = int(self.set_time.get())
         
         self.cpu_label.config(text=f"Загрузка ЦП: {cpu_usage}%")
-        self.ram_label.config(text=f"Использование ОЗУ: {ram_usage}%")
-        self.disk_label.config(text=f"Использование ПЗУ: {disk_usage}%")
+        self.ram_label.config(text=f"ОЗУ: Свободно {ram_usage:.1f} из {self.total_memory:.1f} Gb")
+        self.disk_label.config(text=f"ПЗУ: Свободно {disk_usage:.1f} из {self.total_disk:.1f} Gb")
         
         if self.recording:
             self.record_usage(cpu_usage, ram_usage, disk_usage)
